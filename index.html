@@ -577,9 +577,8 @@ Regras:
 - Priorize medicamentos de venda livre (sem receita) quando possível; se indicar controlado, avise na indicação.
 - Retorne SOMENTE o JSON.`;
 
-/* ── API CALL — Gemini ── */
-const GEMINI_KEY = 'AIzaSyAQ.Ab8RN6JCgC-ShwgKPfZXBZLN13-hwOKQo9HfkJRTurJaPCKvNg';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+/* ── API CALL — via Cloudflare Worker ── */
+const API_URL = 'https://super-pine-df71.natan-radio.workers.dev/';
 
 async function callAPI(systemPrompt, userMessage, loadingMsg) {
   document.getElementById('loading-text').textContent = loadingMsg;
@@ -588,18 +587,17 @@ async function callAPI(systemPrompt, userMessage, loadingMsg) {
   document.getElementById('sintomas-result').classList.remove('active');
   document.getElementById('error-msg').classList.remove('active');
 
-  const resp = await fetch(GEMINI_URL, {
+  const resp = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
-    })
+    body: JSON.stringify({ system: systemPrompt, prompt: userMessage })
   });
+
   const data = await resp.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return JSON.parse(raw.replace(/```json|```/gi, '').trim());
+  if (data.erro) throw new Error('Falha na consulta');
+
+  const raw = (data.texto || '').replace(/```json|```/gi, '').trim();
+  return JSON.parse(raw);
 }
 
 /* ── BUSCA MEDICAMENTO ── */
